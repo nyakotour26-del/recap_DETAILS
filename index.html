@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recap général - Feuille 2</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow: auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #666;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #d32f2f;
+            background-color: #ffcdd2;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #e8f4f8;
+        }
+        
+        .montant-positif {
+            color: #27ae60;
+            font-weight: bold;
+            text-align: right;
+        }
+        
+        .montant-negatif {
+            color: #e74c3c;
+            font-weight: bold;
+            text-align: right;
+        }
+        
+        .montant-zero {
+            color: transparent;
+            text-align: right;
+        }
+        
+        .cellule-titre {
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .cellule-sous-total {
+            background-color: #ecf0f1;
+            font-weight: bold;
+        }
+        
+        .cellule-total {
+            background-color: #2c3e50;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .texte-gras {
+            font-weight: bold;
+        }
+        
+        .texte-italique {
+            font-style: italic;
+        }
+        
+        .texte-centre {
+            text-align: center;
+        }
+        
+        .texte-droite {
+            text-align: right;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-box {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 250px;
+        }
+        
+        .refresh-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .toggle-zero {
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .toggle-zero:hover {
+            background-color: #7f8c8d;
+        }
+        
+        .toggle-zero.active {
+            background-color: #e74c3c;
+        }
+
+        .success-message {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+            border-left: 4px solid #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Recap général - Feuille 2</h1>
+        
+        <div class="controls">
+            <input type="text" id="searchInput" class="search-box" placeholder="Rechercher...">
+            <div>
+                <button id="toggleZeroBtn" class="toggle-zero">Masquer les zéros</button>
+                <button id="refreshBtn" class="refresh-btn">Actualiser les données</button>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading">Chargement de vos données en cours...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="success" class="success-message" style="display: none;"></div>
+        
+        <div id="tableContainer"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableContainer = document.getElementById('tableContainer');
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const successElement = document.getElementById('success');
+            const searchInput = document.getElementById('searchInput');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const toggleZeroBtn = document.getElementById('toggleZeroBtn');
+            
+            let sheetData = [];
+            let showZeros = false;
+
+            // Fonction principale de chargement avec le proxy qui fonctionne
+            function loadData() {
+                loadingElement.style.display = 'block';
+                errorElement.style.display = 'none';
+                successElement.style.display = 'none';
+                tableContainer.innerHTML = '';
+                
+                // URL de la deuxième feuille
+                const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1011617752&single=true&output=csv';
+                const proxyUrl = 'https://api.corsproxy.io/?' + encodeURIComponent(sheetUrl);
+                
+                console.log('Chargement depuis le proxy...');
+                
+                fetch(proxyUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur serveur: ' + response.status);
+                        }
+                        return response.text();
+                    })
+                    .then(csvText => {
+                        if (!csvText || csvText.trim().length < 10) {
+                            throw new Error('Données vides ou insuffisantes');
+                        }
+                        
+                        console.log('Données brutes reçues:', csvText.substring(0, 200));
+                        sheetData = parseCSV(csvText);
+                        
+                        if (sheetData.length === 0) {
+                            throw new Error('Aucune donnée valide trouvée');
+                        }
+                        
+                        displayData(sheetData);
+                        loadingElement.style.display = 'none';
+                        successElement.textContent = `✅ Données chargées avec succès (${sheetData.length} lignes)`;
+                        successElement.style.display = 'block';
+                        
+                        console.log('Données traitées:', sheetData);
+                    })
+                    .catch(error => {
+                        console.error('Erreur de chargement:', error);
+                        loadingElement.style.display = 'none';
+                        errorElement.textContent = 'Erreur: ' + error.message + '. Réessayez en cliquant sur Actualiser.';
+                        errorElement.style.display = 'block';
+                    });
+            }
+
+            function parseCSV(csvText) {
+                const lines = csvText.split('\n').filter(line => line.trim() !== '');
+                const result = [];
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    const row = [];
+                    let current = '';
+                    let inQuotes = false;
+                    
+                    for (let j = 0; j < line.length; j++) {
+                        const char = line[j];
+                        
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            row.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    
+                    // Ajouter le dernier champ
+                    row.push(current.trim().replace(/^"|"$/g, ''));
+                    result.push(row);
+                }
+                
+                return result;
+            }
+
+            function getCellStyle(cellValue, rowIndex, colIndex) {
+                const classes = [];
+                
+                if (!cellValue && cellValue !== 0) return '';
+                
+                const strValue = cellValue.toString();
+                
+                // Vérifier si c'est un montant numérique
+                const cleanValue = strValue.replace(/[€$\s]/g, '').replace(/,/g, '.');
+                const numericValue = parseFloat(cleanValue);
+                const isNumeric = !isNaN(numericValue) && strValue !== '' && strValue !== '-';
+                
+                if (isNumeric) {
+                    classes.push('texte-droite');
+                    if (numericValue === 0 && !showZeros) {
+                        classes.push('montant-zero');
+                    } else if (numericValue > 0) {
+                        classes.push('montant-positif');
+                    } else if (numericValue < 0) {
+                        classes.push('montant-negatif');
+                    }
+                }
+                
+                // Styles basés sur le contenu et la position
+                const lowerValue = strValue.toLowerCase();
+                
+                // Première ligne = en-têtes
+                if (rowIndex === 0) {
+                    classes.push('cellule-titre');
+                }
+                // Lignes avec "TOTAL" en majuscules
+                else if (strValue === 'TOTAL' || lowerValue.includes('total général') || lowerValue.includes('resultat')) {
+                    classes.push('cellule-total');
+                }
+                // Lignes avec "SOUS-TOTAL" ou catégories principales
+                else if (lowerValue.includes('sous-total') || lowerValue.includes('subtotal') || 
+                         (strValue === strValue.toUpperCase() && strValue.length > 3)) {
+                    classes.push('cellule-sous-total', 'texte-gras');
+                }
+                
+                return classes.join(' ');
+            }
+
+            function displayData(data) {
+                tableContainer.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    tableContainer.innerHTML = '<p class="texte-centre">Aucune donnée disponible</p>';
+                    return;
+                }
+                
+                const table = document.createElement('table');
+                
+                // En-têtes
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                
+                data[0].forEach((cell, colIndex) => {
+                    const th = document.createElement('th');
+                    th.textContent = cell || '';
+                    th.className = getCellStyle(cell, 0, colIndex);
+                    headerRow.appendChild(th);
+                });
+                
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+                
+                // Corps du tableau
+                const tbody = document.createElement('tbody');
+                
+                for (let i = 1; i < data.length; i++) {
+                    // Ignorer les lignes complètement vides
+                    if (data[i].every(cell => !cell || cell.toString().trim() === '')) {
+                        continue;
+                    }
+                    
+                    const row = document.createElement('tr');
+                    
+                    data[i].forEach((cell, colIndex) => {
+                        const td = document.createElement('td');
+                        td.textContent = cell || '';
+                        td.className = getCellStyle(cell, i, colIndex);
+                        row.appendChild(td);
+                    });
+                    
+                    tbody.appendChild(row);
+                }
+                
+                table.appendChild(tbody);
+                tableContainer.appendChild(table);
+            }
+
+            function filterData() {
+                const searchTerm = searchInput.value.toLowerCase();
+                
+                if (!searchTerm || !sheetData.length) {
+                    displayData(sheetData);
+                    return;
+                }
+                
+                const filteredData = [sheetData[0]];
+                
+                for (let i = 1; i < sheetData.length; i++) {
+                    const row = sheetData[i];
+                    let rowContainsTerm = false;
+                    
+                    for (let j = 0; j < row.length; j++) {
+                        if (row[j] && row[j].toString().toLowerCase().includes(searchTerm)) {
+                            rowContainsTerm = true;
+                            break;
+                        }
+                    }
+                    
+                    if (rowContainsTerm) {
+                        filteredData.push(row);
+                    }
+                }
+                
+                displayData(filteredData);
+            }
+
+            function toggleZeros() {
+                showZeros = !showZeros;
+                toggleZeroBtn.textContent = showZeros ? 'Afficher les zéros' : 'Masquer les zéros';
+                toggleZeroBtn.classList.toggle('active', showZeros);
+                if (sheetData.length > 0) {
+                    displayData(sheetData);
+                }
+            }
+
+            // Événements
+            searchInput.addEventListener('input', filterData);
+            refreshBtn.addEventListener('click', loadData);
+            toggleZeroBtn.addEventListener('click', toggleZeros);
+            
+            // Chargement initial
+            loadData();
+        });
+    </script>
+</body>
+</html>
