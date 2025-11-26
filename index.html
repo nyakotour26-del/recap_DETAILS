@@ -114,6 +114,12 @@
             font-weight: bold;
         }
         
+        .cellule-entree-sortie {
+            background-color: #ffa726 !important;
+            font-weight: bold !important;
+            color: #000 !important;
+        }
+        
         .texte-gras {
             font-weight: bold;
         }
@@ -299,7 +305,7 @@
                 return result;
             }
 
-            function getCellStyle(cellValue, rowIndex, colIndex) {
+            function getCellStyle(cellValue, rowIndex, colIndex, rowData) {
                 const classes = [];
                 
                 if (!cellValue && cellValue !== 0) return '';
@@ -339,7 +345,35 @@
                     classes.push('cellule-sous-total', 'texte-gras');
                 }
                 
+                // Vérifier si c'est la ligne avec les en-têtes de colonnes spécifiques
+                if (rowData && isEnteteColonnes(rowData)) {
+                    classes.push('cellule-entree-sortie');
+                }
+                
                 return classes.join(' ');
+            }
+
+            function isEnteteColonnes(rowData) {
+                // Vérifier si la ligne contient les en-têtes spécifiques
+                const valeursRecherchees = [
+                    'désignation', 'entrée ar', 'sortie ar', 'entrée €', 'sortie €', 
+                    'entrée fsuisse', 'sortie fsuisse', 'entrée £', 'sortie £'
+                ];
+                
+                let correspondances = 0;
+                for (let i = 0; i < rowData.length; i++) {
+                    const valeurCellule = rowData[i] ? rowData[i].toString().toLowerCase().trim() : '';
+                    
+                    for (let j = 0; j < valeursRecherchees.length; j++) {
+                        if (valeurCellule.includes(valeursRecherchees[j])) {
+                            correspondances++;
+                            break;
+                        }
+                    }
+                }
+                
+                // Si au moins 3 correspondances trouvées, on considère que c'est la bonne ligne
+                return correspondances >= 3;
             }
 
             function displayData(data) {
@@ -380,7 +414,7 @@
                     data[i].forEach((cell, colIndex) => {
                         const td = document.createElement('td');
                         td.textContent = cell || '';
-                        td.className = getCellStyle(cell, i, colIndex);
+                        td.className = getCellStyle(cell, i, colIndex, data[i]);
                         row.appendChild(td);
                     });
                     
